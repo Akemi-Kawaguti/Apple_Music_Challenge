@@ -9,13 +9,22 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            Tab("Home", systemImage: "house.fill") {
+                HomeView()
+            }
+            Tab("Profile", systemImage: "person.crop.circle.fill") {
+//                PerfilView()
+            }
+            Tab("Discover", systemImage: "play.square.stack.fill") {
+//                DescobrirView()
+            }
+            
+            Tab (role: .search) {
+                // Só pra ir testando a view de musica enquanto nn decidimos um jeito de ir ver ela.
+                MusicView()
+            }
         }
-        .padding()
     }
 }
 

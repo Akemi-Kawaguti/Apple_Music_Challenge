@@ -17,7 +17,7 @@ struct CardMusica: View {
         Image(imagem)
             .resizable()
             .scaledToFill()
-            .frame(width: 95, height: 95)
+            .frame(width: 95, height: 95) // talvez 75?
             .clipShape(
                 UnevenRoundedRectangle(
                     topLeadingRadius: 5,
