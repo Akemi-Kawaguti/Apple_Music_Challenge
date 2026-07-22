@@ -18,7 +18,7 @@ class AudioManager {
     
     // Variaveis padrão
     var isPlaying = false
-    private var audioPlayer: AVPlayer?
+    var audioPlayer: AVPlayer?
     
     init() {
         setupAudioSession()
@@ -34,7 +34,7 @@ class AudioManager {
     private func setupAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
             try session.setActive(true)
         } catch {
             print("Failed to activate audio session: \(error.localizedDescription)")
