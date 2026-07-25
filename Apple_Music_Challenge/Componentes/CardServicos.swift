@@ -35,7 +35,7 @@ struct CardServicos: View {
                         .clipShape(shape)
                 }
                 .overlay {
-                    shape.stroke(Color(red: 0.47, green: 0.47, blue: 0.47).opacity(0.2), lineWidth: 10)
+                    shape.stroke(.gray.opacity(0.3), lineWidth: 10)
                 }
             
         } //VStack 18
