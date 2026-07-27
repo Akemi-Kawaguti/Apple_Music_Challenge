@@ -34,7 +34,7 @@ struct Evento: View {
                 Image("Banner_Evento")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 295, height: 149, alignment: .leading)
+                    .frame(width: 365, height: 189, alignment: .leading)
                     .clipShape(
                         UnevenRoundedRectangle(
                             topLeadingRadius: 5,
