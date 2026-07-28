@@ -6,164 +6,223 @@
 //
 
 import SwiftUI
+import MusicKit
 
-
-// Tela onde mostra a musica atual
 struct MusicView: View {
-    
-    @State var slider: CGFloat = 25;
-    @State var audioManager = AudioManager()
+
+    @State private var audioManager = MusicKitPlayer()
+    @State private var isDraggingSlider = false
+    @State private var localSliderValue: Double = 0.0
     
     var body: some View {
-        Spacer()
-        VStack(alignment: .leading) {
-            Image("Musica_1")
-                .resizable()
-                .scaledToFit()
-                .clipShape(
+        NavigationStack {
+            ZStack {
+                // Background
+                LinearGradient(
+                    stops: [
+                        .init(color: .pink, location: 0),
+                        .init(color: .red, location: 0.35),
+                        .init(color: .background, location: 0.7)
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .ignoresSafeArea()
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    
+//                    HStack {
+//                        Spacer()
+//                        // MARK: - Capa da Música
+//                        Image("Musica_1")
+//                            .resizable()
+//                            .scaledToFit()
+//                            .clipShape(
+//                                UnevenRoundedRectangle(
+//                                    topLeadingRadius: 10,
+//                                    bottomLeadingRadius: 30,
+//                                    bottomTrailingRadius: 10,
+//                                    topTrailingRadius: 30
+//                                )
+//                            )
+//                        Spacer()
+//                        
+//                    }
+//
+//                    // MARK: - Informações da Faixa
+//                    VStack(alignment: .leading, spacing: 4) {
+//                        Text("SwiftUI Symphony")
+//                            .font(.title2)
+//                            .bold()
+//                            .foregroundStyle(.primary)
+//                        
+//                        Text("Apple Dev")
+//                            .font(.subheadline)
+//                            .foregroundStyle(.secondary)
+//                    }
+                    
+                    if let artwork = audioManager.currentSong?.artwork {
+                        ArtworkImage(artwork, width: 300, height: 300)
+                            .scaledToFit()
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 10,
+                                    bottomLeadingRadius: 30,
+                                    bottomTrailingRadius: 10,
+                                    topTrailingRadius: 30
+                                )
+                            )
+                    } else {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "music.note")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 200, height: 200)
+                            Spacer()
+                        }
+                        
+                    }
+                    Spacer()
+
+                    Text(audioManager.currentSong?.title ?? "Nenhuma música")
+                        .font(.title2)
+                        .bold()
+
+                    Text(audioManager.currentSong?.artistName ?? "Artista")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    
+                    // MARK: - Controles do Slider e Tempo
+                    VStack(spacing: 7) {
+                        Slider(
+                            value: Binding(
+                                get: { isDraggingSlider ? localSliderValue : audioManager.playbackProgress },
+                                set: { localSliderValue = $0 }
+                            ),
+                            in: 0...1.0,
+                            onEditingChanged: { editing in
+                                isDraggingSlider = editing
+                                if !editing {
+                                    audioManager.seek(to: localSliderValue)
+                                }
+                            }
+                        )
+                        
+                        HStack {
+                            Text(audioManager.formatTime(audioManager.currentTime))
+                            Spacer()
+                            Text(audioManager.formatTime(audioManager.totalDuration))
+                        }
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    }
+                    
+                    // MARK: - Botões de Controle do Player
+                    HStack(spacing: 0) {
+                        // Repetir
+                        Button {
+                            audioManager.toggleRepeat()
+                        } label: {
+                            Image(systemName: audioManager.isRepeatOn ? "repeat.1" : "repeat")
+                                .font(.system(size: 18))
+                                .foregroundStyle(audioManager.isRepeatOn ? .blue : .primary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Voltando 10s
+                        Button {
+                            audioManager.seekBy(seconds: -10)
+                        } label: {
+                            Image(systemName: "gobackward.10")
+                                .font(.system(size: 20, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Voltar Faixa
+                        Button {
+                            audioManager.skipToPrevious()
+                        } label: {
+                            Image(systemName: "backward.end.fill")
+                                .font(.system(size: 26))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Play / Pause Principal
+                        Button {
+                            audioManager.togglePlayPause()
+                        } label: {
+                            Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 40))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Avançar Faixa
+                        Button {
+                            audioManager.skipToNext()
+                        } label: {
+                            Image(systemName: "forward.end.fill")
+                                .font(.system(size: 26))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Avançar 10s
+                        Button {
+                            audioManager.seekBy(seconds: 10)
+                        } label: {
+                            Image(systemName: "goforward.10")
+                                .font(.system(size: 20, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Shuffle
+                        Button {
+                            audioManager.toggleShuffle()
+                        } label: {
+                            Image(systemName: "shuffle")
+                                .font(.system(size: 18))
+                                .foregroundStyle(audioManager.isShuffleOn ? .blue : .primary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .foregroundStyle(.primary)
+                    
+                    Spacer()
+                    
+                    // MARK: - Painel de Letras / Card Inferior
                     UnevenRoundedRectangle(
                         topLeadingRadius: 10,
                         bottomLeadingRadius: 30,
                         bottomTrailingRadius: 10,
                         topTrailingRadius: 30
                     )
-                )
-                .padding()
-        
-        
-            Text("SwiftUI Symphony")
-                .font(.title2)
-                .bold()
-                
-            Text("Apple Dev")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            Slider(value: $slider, in: 0...100)
-            
-            // Botões
-            HStack {
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: "repeat") //nao ta executando
-                        .font(Font.system(size: 22))
-                    //                        .foregroundColor(.blue)
+                    .frame(height: 140)
+                    .foregroundStyle(.ultraThickMaterial)
                 }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
+                .padding(.horizontal, 24)
+                .padding(.vertical)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {}) {
+                        Image(systemName: "apple.haptics.and.music.note")
                     }
-                }) {
-                    Image(systemName: "backward.end.fill") //mudar para qualidade de som
-                        .font(Font.system(size: 22))
-//                                            .foregroundColor(.blue)
                 }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: "backward.fill") //voltar 10 segundos
-                        .font(Font.system(size: 26))
-//                                            .foregroundColor(.black)
-                }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill") //animação mais sutil
-                        .font(Font.system(size: 40))
-                    //                        .foregroundColor(.blue)
-                }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: "forward.fill") //10 segundos a frente
-                        .font(Font.system(size: 26))
-//                                            .foregroundColor(.black)
-                }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: "airplay.audio")
-                        .font(Font.system(size: 22))
-                    //                        .foregroundColor(.blue)
-                }
-                .frame(maxWidth: .infinity)
-
-                
-                Button(action: {
-                    if audioManager.isPlaying {
-                        audioManager.pause()
-                    } else {
-                        audioManager.play()
-                    }
-                }) {
-                    Image(systemName: "airplay.audio") //biblioteca
-                        .font(Font.system(size: 22))
-                    //                        .foregroundColor(.blue)
-                }
-                .frame(maxWidth: .infinity)
-
-            } 
+            }
         }
-        .padding()
-        .padding(.horizontal, 20)
-//        .border(.red, width: 1)
-        
-        UnevenRoundedRectangle(
-            topLeadingRadius: 10,
-            bottomLeadingRadius: 30,
-            bottomTrailingRadius: 10,
-            topTrailingRadius: 30
-        )
-        .padding(.horizontal, 20)
-        .padding()
-        .frame(maxHeight: 190)
-        .foregroundStyle(.ultraThickMaterial)
-        .toolbar {
-            Button(
-                "",
-                systemImage: "apple.haptics.and.music.note",
-                action: {}
-            )
-        }
-    } 
+    }
+    
+    // Método auxiliar (Exemplo de extração de lógica)
+//    private func fetchLyrics(for track: Track) async -> Track.Lyrics? {
+//        do {
+//            let detailedTrack = try await track.with([.lyrics])
+//            return detailedTrack.lyrics
+//        } catch {
+//            print("Erro ao carregar letra: \(error.localizedDescription)")
+//            return nil
+//        }
+//    }
 }
 
 #Preview {
