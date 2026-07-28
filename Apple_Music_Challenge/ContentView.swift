@@ -33,20 +33,23 @@ struct ContentView: View {
     @State private var ativoTab: CustomTab = .home
     
     @ViewBuilder
-        private var currentView: some View {
-            switch ativoTab {
-            case .home:
-                Home()
-            case .match:
-                Match()
-            case .amigos:
-                Amigos()
-            }
+    private var currentView: some View {
+        switch ativoTab {
+        case .home:
+            Home()
+        case .match:
+            Match()
+        case .amigos:
+            Amigos()
         }
+    }
     
     var body: some View {
         
         ZStack(alignment: .bottom){
+            
+            currentView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             CustomTabBar(mostrarTabBar: true, ativoTab: $ativoTab){
                 isExpanded in
@@ -61,7 +64,7 @@ struct ContentView: View {
 extension View {
     @ViewBuilder
     func blurFade(_ status: Bool) -> some View {
-            self
+        self
             .compositingGroup()
             .blur(radius: status ? 0 : 10)
             .opacity(status ? 1 : 0)
