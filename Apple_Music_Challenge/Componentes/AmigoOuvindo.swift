@@ -44,7 +44,7 @@ struct AmigoOuvindo: View {
                     bottomTrailingRadius: 5,
                     topTrailingRadius: 15
                 ))
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 15)
     } //body view
 } //card view
 

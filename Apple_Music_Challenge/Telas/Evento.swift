@@ -10,22 +10,8 @@ import SwiftUI
 struct Evento: View {
     
     var body: some View {
-        
-        ZStack{
-            LinearGradient(
-                stops: [
-                    .init(color: .yellow, location: 0),
-                    .init(color: .orange, location: 0.35),
-                    .init(color: .background, location: 0.7)
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .ignoresSafeArea()
-            
-            ScrollView{
-                VStack{
-                    
+        ScrollView {
+            VStack{
                     HStack{
                         
                         Image("memoji")
@@ -101,9 +87,20 @@ struct Evento: View {
                     
                 } //VStack
                 
-            } //body
-        } //home view
-    } //Scrowview
+            }
+        .background(
+            LinearGradient(
+                stops: [
+                    .init(color: .yellow, location: 0),
+                    .init(color: .orange, location: 0.35),
+                    .init(color: .background, location: 0.7)
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .ignoresSafeArea()
+        )
+    }
 }
 
 #Preview {

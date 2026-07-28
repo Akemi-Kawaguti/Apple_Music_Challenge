@@ -12,20 +12,7 @@ struct Amigos: View {
     private let generos = ["Rock", "Eletronica"]
     
     var body: some View {
-        
-        ZStack{
-            LinearGradient(
-                stops: [
-                    .init(color: .pink, location: 0),
-                    .init(color: .purple, location: 0.35),
-                    .init(color: .background, location: 0.7)
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .ignoresSafeArea()
-            
-            ScrollView(.vertical, showsIndicators: true) {
+            ScrollView(.vertical, showsIndicators: false) {
                 
                 VStack(alignment: .leading, spacing: 24) {
                     
@@ -56,37 +43,24 @@ struct Amigos: View {
                     }
                     
                 }
-                .padding(.vertical)
+                .padding()
             }
+            .background(
+                LinearGradient(
+                    stops: [
+                        .init(color: .pink, location: 0),
+                        .init(color: .purple, location: 0.35),
+                        .init(color: .background, location: 0.7)
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .ignoresSafeArea()
+            )
             //            .background(Color.background)
-        }
-    }
-    
-    // MARK: - Componente de Seção Horizontal Reaproveitável
-    struct SecaoMusical: View {
-        let titulo: String
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(titulo)
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.amarelo)
-                    .padding(.horizontal)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 15) {
-                        ForEach(1...5, id: \.self) { num in
-                            CardMusica(imagem: "Musica_\(num)")
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .scrollTargetLayout()
-            }
-        }
     }
 }
+
 #Preview {
     Amigos()
 }

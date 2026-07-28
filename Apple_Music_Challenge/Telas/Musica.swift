@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MusicView: View {
     
+    @Binding var expandPlayer: Bool
+    
     @State private var audioManager = SpotifyManager()
     
     @State private var isDraggingSlider = false
@@ -16,7 +18,7 @@ struct MusicView: View {
     @State private var artworkImage: UIImage? = nil
     
     var body: some View {
-        NavigationStack {
+        NavigationStack { // tem que estar numa navigation stack pra funcionar o toolbar :c
             ZStack {
                 // Background
                 Group {
@@ -200,18 +202,37 @@ struct MusicView: View {
                     .frame(height: 140)
                     .foregroundStyle(.ultraThickMaterial)
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical)
+                .padding(.horizontal, 36)
+                .padding(.top, 70)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        expandPlayer = false
+                    }) {
+                        Image(systemName: "chevron.backward")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {}) {
-                        Image(systemName: "waveform")
+                        Image(systemName: "apple.haptics.and.music.note")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {}) {
+                        Image(systemName: "airplay.audio")
                     }
                 }
             }
         }
     }
+}
+
+#Preview {
+    
+    @Previewable @State var isExpanded: Bool = false
+    
+    MusicView(expandPlayer: $isExpanded)
 }
 
 // Modelo para representar uma linha da letra sincronizada
@@ -235,9 +256,3 @@ struct MusicView: View {
 //}
 
 //Na sua MusicView, você destacaria a linha ativa comparando o audioManager.currentTime com o campo time de cada linha da letra.
-
-
-
-#Preview {
-    MusicView()
-}
