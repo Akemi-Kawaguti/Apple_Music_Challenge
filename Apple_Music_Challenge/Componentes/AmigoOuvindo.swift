@@ -24,19 +24,19 @@ struct AmigoOuvindo: View {
                     .clipShape(Circle())
             }.padding(.horizontal, 15)
             
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(titulo)
                     .font(.title3)
                     .bold()
                 
                 Text(amigo)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
             }.padding(.vertical, 15)
             
             Spacer()
             
-        }.background(.gray.opacity(0.3))
+        }.background(.gray.opacity(0.5))
             .clipShape(
                 UnevenRoundedRectangle(
                     topLeadingRadius: 5,
