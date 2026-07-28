@@ -10,16 +10,16 @@ import SwiftUI
 // MARK: Tab Items
 enum CustomTab: String, CaseIterable {
     case home = "Home"
-    case discover = "Descobrir"
-    case profile = "Perfil"
+    case match = "Match"
+    case amigos = "Perfil"
     
     var icone: String {
         switch self {
         case .home:
             return "house"
-        case .discover:
+        case .match:
             return "magnifyingglass"
-        case .profile:
+        case .amigos:
             return "person.crop.circle"
         }
     }

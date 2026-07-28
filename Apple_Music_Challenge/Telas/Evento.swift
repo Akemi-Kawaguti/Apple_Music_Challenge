@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct Evento: View {
+    
     var body: some View {
         
         ZStack{
@@ -21,6 +22,7 @@ struct Evento: View {
                 endPoint: .center
             )
             .ignoresSafeArea()
+            
             ScrollView{
                 VStack{
                     

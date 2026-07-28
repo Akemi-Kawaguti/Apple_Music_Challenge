@@ -9,57 +9,34 @@ import SwiftUI
 import MusicKit
 
 struct MusicView: View {
-
+    
     @State private var audioManager = MusicKitPlayer()
     @State private var isDraggingSlider = false
     @State private var localSliderValue: Double = 0.0
+    @State private var artworkImage: UIImage? = nil
     
     var body: some View {
         NavigationStack {
             ZStack {
                 // Background
-                LinearGradient(
-                    stops: [
-                        .init(color: .pink, location: 0),
-                        .init(color: .red, location: 0.35),
-                        .init(color: .background, location: 0.7)
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
-                )
+                Group {
+                    if let artworkImage {
+                        FundoTela(image: artworkImage)
+                    } else {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .pink, location: 0),
+                                .init(color: .red, location: 0.35),
+                                .init(color: .background, location: 0.7)
+                            ],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    }
+                }
                 .ignoresSafeArea()
                 
                 VStack(alignment: .leading, spacing: 10) {
-                    
-//                    HStack {
-//                        Spacer()
-//                        // MARK: - Capa da Música
-//                        Image("Musica_1")
-//                            .resizable()
-//                            .scaledToFit()
-//                            .clipShape(
-//                                UnevenRoundedRectangle(
-//                                    topLeadingRadius: 10,
-//                                    bottomLeadingRadius: 30,
-//                                    bottomTrailingRadius: 10,
-//                                    topTrailingRadius: 30
-//                                )
-//                            )
-//                        Spacer()
-//                        
-//                    }
-//
-//                    // MARK: - Informações da Faixa
-//                    VStack(alignment: .leading, spacing: 4) {
-//                        Text("SwiftUI Symphony")
-//                            .font(.title2)
-//                            .bold()
-//                            .foregroundStyle(.primary)
-//                        
-//                        Text("Apple Dev")
-//                            .font(.subheadline)
-//                            .foregroundStyle(.secondary)
-//                    }
                     
                     if let artwork = audioManager.currentSong?.artwork {
                         ArtworkImage(artwork, width: 300, height: 300)
@@ -72,6 +49,15 @@ struct MusicView: View {
                                     topTrailingRadius: 30
                                 )
                             )
+                            .task(id: artwork) {
+
+                                if let url = artwork.url(width: 300, height: 300),
+                                   let data = try? Data(contentsOf: url),
+                                   let uiImage = UIImage(data: data) {
+                                    self.artworkImage = uiImage
+                                }
+                            }
+                        
                     } else {
                         HStack {
                             Spacer()
@@ -84,11 +70,11 @@ struct MusicView: View {
                         
                     }
                     Spacer()
-
+                    
                     Text(audioManager.currentSong?.title ?? "Nenhuma música")
                         .font(.title2)
                         .bold()
-
+                    
                     Text(audioManager.currentSong?.artistName ?? "Artista")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -213,16 +199,16 @@ struct MusicView: View {
         }
     }
     
-    // Método auxiliar (Exemplo de extração de lógica)
-//    private func fetchLyrics(for track: Track) async -> Track.Lyrics? {
-//        do {
-//            let detailedTrack = try await track.with([.lyrics])
-//            return detailedTrack.lyrics
-//        } catch {
-//            print("Erro ao carregar letra: \(error.localizedDescription)")
-//            return nil
-//        }
-//    }
+    // Método auxiliar (Exemplo de extração de lógica para carregar letra de musica)
+    //    private func fetchLyrics(for track: Track) async -> Track.Lyrics? {
+    //        do {
+    //            let detailedTrack = try await track.with([.lyrics])
+    //            return detailedTrack.lyrics
+    //        } catch {
+    //            print("Erro ao carregar letra: \(error.localizedDescription)")
+    //            return nil
+    //        }
+    //    }
 }
 
 #Preview {
