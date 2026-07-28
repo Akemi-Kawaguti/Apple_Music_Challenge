@@ -21,11 +21,11 @@ struct CustomTabBar: View{
     @State private var isSearchExpanded: Bool = false
     @State private var searchText: String = ""
     @FocusState private var isKeyboardActive: Bool
-
+    
     var body: some View {
         GeometryReader{
             let tamanho = $0.size
-            let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : 5)
+            let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : CustomTab.allCases.count)
             let tabItemWidth: CGFloat = max(min(tamanho.width / CGFloat(tabs.count) + (mostrarTabBar ? 1 : 0), 90), 60)
             let tabItemHeight: CGFloat = 56
             
@@ -41,7 +41,7 @@ struct CustomTabBar: View{
                                 TabItemView(tab,
                                             width: isSearchExpanded ? 45 : tabItemWidth,
                                             height: isSearchExpanded ? 45 : tabItemHeight)
-                                    .opacity(isSearchExpanded ? (ativoTab == tab ? 1 : 0) : 1)
+                                .opacity(isSearchExpanded ? (ativoTab == tab ? 1 : 0) : 1)
                             }
                         }
                         .background(alignment: .leading){
@@ -109,9 +109,9 @@ struct CustomTabBar: View{
     //Tab Item View
     @ViewBuilder
     private func TabItemView(_ tab: CustomTab, width: CGFloat, height: CGFloat) -> some View {
-        let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : 5)
+        let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : CustomTab.allCases.count)
         let tabCount = tabs.count - 1
-
+        
         VStack(spacing: 6){
             Image(systemName: tab.icone)
                 .font(.title2)
@@ -190,15 +190,15 @@ struct CustomTabBar: View{
                             isSearchExpanded = true
                         }
                     }
-//                    .onTapGesture {
-//                        withAnimation(.bouncy) {
-//                            isSearchExpanded = true
-//                        }
-//                        // Força o foco do teclado assim que a barra expande
-//                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-//                            isKeyboardActive = true
-//                        }
-//                    }
+                //                    .onTapGesture {
+                //                        withAnimation(.bouncy) {
+                //                            isSearchExpanded = true
+                //                        }
+                //                        // Força o foco do teclado assim que a barra expande
+                //                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                //                            isKeyboardActive = true
+                //                        }
+                //                    }
                     .allowsHitTesting(!isSearchExpanded)
                 
                 if isSearchExpanded {
@@ -247,8 +247,8 @@ extension View {
         if #available(iOS 17.0, *) {
             self
                 .onChange(of: value) { oldValue, newValue in
-                result(newValue)
-            }
+                    result(newValue)
+                }
         } else {
             self
                 .onChange(of: value){ newValue in

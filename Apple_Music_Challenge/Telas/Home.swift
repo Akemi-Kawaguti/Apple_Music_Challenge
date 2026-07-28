@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-//import Kingfisher
 
 struct Home: View {
     
@@ -14,10 +13,6 @@ struct Home: View {
         NavigationStack{
             ScrollView{
                 VStack(spacing: 20){
-                    //playlists
-//                    PlayListView()
-                    //todas musicas
-                    //albuns
                     
                     //MARK: Mais ouvidas
                     HStack {
@@ -48,8 +43,12 @@ struct Home: View {
                         }
                         
                         GridRow {
-                            CardServicos(imagem: "amigos", servico: "Amigos ouvindo")
-                            CardServicos(imagem: "festival", servico: "Marcar evento")
+                            NavigationLink(destination: Amigos()) {
+                                CardServicos(imagem: "amigos", servico: "Amigos ouvindo")
+                            }
+                            NavigationLink(destination: Evento()) {
+                                CardServicos(imagem: "festival", servico: "Marcar evento")
+                            }
                         }
                     }
                     .padding(20) //Grid

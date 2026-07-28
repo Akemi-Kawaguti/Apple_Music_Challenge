@@ -28,7 +28,7 @@ struct Evento: View {
                     
                     HStack{
                         
-                        Image("amigos")
+                        Image("memoji")
                             .resizable()
                             .scaledToFill()
                             .frame(width: 54, height: 54)

@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import MusicKit
 
 struct MusicView: View {
     
-    @State private var audioManager = MusicKitPlayer()
+    @State private var audioManager = SpotifyManager()
+    
     @State private var isDraggingSlider = false
     @State private var localSliderValue: Double = 0.0
     @State private var artworkImage: UIImage? = nil
@@ -25,8 +25,8 @@ struct MusicView: View {
                     } else {
                         LinearGradient(
                             stops: [
-                                .init(color: .pink, location: 0),
-                                .init(color: .red, location: 0.35),
+                                .init(color: .green, location: 0),
+                                .init(color: .blue, location: 0.25),
                                 .init(color: .background, location: 0.7)
                             ],
                             startPoint: .top,
@@ -38,26 +38,41 @@ struct MusicView: View {
                 
                 VStack(alignment: .leading, spacing: 10) {
                     
-                    if let artwork = audioManager.currentSong?.artwork {
-                        ArtworkImage(artwork, width: 300, height: 300)
-                            .scaledToFit()
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 10,
-                                    bottomLeadingRadius: 30,
-                                    bottomTrailingRadius: 10,
-                                    topTrailingRadius: 30
-                                )
-                            )
-                            .task(id: artwork) {
-
-                                if let url = artwork.url(width: 300, height: 300),
-                                   let data = try? Data(contentsOf: url),
-                                   let uiImage = UIImage(data: data) {
-                                    self.artworkImage = uiImage
-                                }
+                    // Exibição da capa do álbum vinda da URL da Spotify Web API
+                    if let artworkURLString = audioManager.currentSong?.albumArtworkURL,
+                       let url = URL(string: artworkURLString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: 300, height: 300)
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .clipShape(
+                                        UnevenRoundedRectangle(
+                                            topLeadingRadius: 10,
+                                            bottomLeadingRadius: 30,
+                                            bottomTrailingRadius: 10,
+                                            topTrailingRadius: 30
+                                        )
+                                    )
+                                    .task(id: url) {
+                                        if let data = try? Data(contentsOf: url),
+                                           let uiImage = UIImage(data: data) {
+                                            self.artworkImage = uiImage
+                                        }
+                                    }
+                            case .failure(_):
+                                Image(systemName: "music.note")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 200, height: 200)
+                            @unknown default:
+                                EmptyView()
                             }
-                        
+                        }
                     } else {
                         HStack {
                             Spacer()
@@ -67,7 +82,6 @@ struct MusicView: View {
                                 .frame(width: 200, height: 200)
                             Spacer()
                         }
-                        
                     }
                     Spacer()
                     
@@ -192,24 +206,37 @@ struct MusicView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {}) {
-                        Image(systemName: "apple.haptics.and.music.note")
+                        Image(systemName: "waveform")
                     }
                 }
             }
         }
     }
-    
-    // Método auxiliar (Exemplo de extração de lógica para carregar letra de musica)
-    //    private func fetchLyrics(for track: Track) async -> Track.Lyrics? {
-    //        do {
-    //            let detailedTrack = try await track.with([.lyrics])
-    //            return detailedTrack.lyrics
-    //        } catch {
-    //            print("Erro ao carregar letra: \(error.localizedDescription)")
-    //            return nil
-    //        }
-    //    }
 }
+
+// Modelo para representar uma linha da letra sincronizada
+//struct LyricLine: Identifiable, Equatable {
+//    let id = UUID()
+//    let time: TimeInterval // Momento em segundos em que a linha aparece
+//    let text: String
+//}
+//
+//// Adicione ao seu SpotifyManager ou a um LyricsService dedicado:
+//func fetchLyricsForCurrentSong() async -> [LyricLine] {
+//    guard let song = currentSong else { return [] }
+//
+//    // Exemplo: Você faria uma requisição para uma API externa (ex: LRCLIB API)
+//    // Passando o título (song.title) e o artista (song.artistName) para buscar o arquivo LRC.
+//
+//    return [
+//        LyricLine(time: 5.0, text: "Primeira frase da música..."),
+//        LyricLine(time: 12.5, text: "Segunda frase sincronizada...")
+//    ]
+//}
+
+//Na sua MusicView, você destacaria a linha ativa comparando o audioManager.currentTime com o campo time de cada linha da letra.
+
+
 
 #Preview {
     MusicView()
