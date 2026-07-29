@@ -9,9 +9,10 @@ import SwiftUI
 
 @main
 struct Apple_Music_ChallengeApp: App {
+    @State private var spotifyManager = SpotifyManager()
     var body: some Scene {
         WindowGroup {
             ContentView()
-        }
+        }.environment(spotifyManager)
     }
 }

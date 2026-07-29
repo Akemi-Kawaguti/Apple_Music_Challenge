@@ -4,14 +4,14 @@
 //
 //  Created by Tais Akemi Kawaguti on 28/07/26.
 //
-
 import Foundation
 import SwiftUI
 import Observation
 import AuthenticationServices
+import UIKit
+import CoreHaptics
 
 // MARK: - Modelos de Resposta do Spotify API
-
 struct SpotifyPlaybackState: Codable {
     let is_playing: Bool
     let progress_ms: Int?
@@ -46,6 +46,14 @@ struct SpotifyDevice: Codable {
     let name: String
 }
 
+struct SpotifySearchResponse: Codable {
+    let tracks: SpotifyTrackSearchResult?
+}
+
+struct SpotifyTrackSearchResult: Codable {
+    let items: [SpotifyTrackItem]
+}
+
 // MARK: - SpotifyManager Atualizado
 
 @MainActor
@@ -55,19 +63,19 @@ final class SpotifyManager: NSObject, ASWebAuthenticationPresentationContextProv
     // MARK: - Configurações da API
     private let clientID = "1eaa4fdf6c2141c8b6f7b4bc8e36db30"
     private let redirectURI = "musicapplechallenge://callback"
+    private let clientSecret = "30caf67d52bc4b08b79111b88bbb4408"
     private let scopes = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
     
     // MARK: - Tokens de Acesso
-    private var accessToken: String? {
+    var accessToken: String? {
         get { UserDefaults.standard.string(forKey: "spotify_access_token") }
         set { UserDefaults.standard.set(newValue, forKey: "spotify_access_token") }
     }
     
     // MARK: - Modelos de Letras e Músicas
-    
     struct LyricLine: Identifiable, Codable, Equatable {
         var id = UUID()
-        let time: TimeInterval // Tempo em segundos em que a linha deve aparecer
+        let time: TimeInterval
         let text: String
     }
     
@@ -100,31 +108,93 @@ final class SpotifyManager: NSObject, ASWebAuthenticationPresentationContextProv
         }
     }
     
-    // MARK: - Autorização OAuth2 com Spotify
-    func authenticate() {
-        guard var components = URLComponents(string: "https://accounts.spotify.com/authorize") else { return }
-        
-        components.queryItems = [
-            URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "response_type", value: "token"), // Utilizando Implicit Grant
-            URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "scope", value: scopes),
-            URLQueryItem(name: "show_dialog", value: "true")
-        ]
-        
-        guard let authURL = components.url else { return }
-        
-        let session = ASWebAuthenticationSession(
-            url: authURL,
-            callbackURLScheme: "musicapplechallenge"
-        ) { [weak self] callbackURL, error in
-            guard let callbackURL = callbackURL, error == nil else { return }
-            self?.extractToken(from: callbackURL)
+    private var authSession: ASWebAuthenticationSession?
+    
+    // MARK: - Autorização OAuth2 com Spotify (Auth Code Flow)
+        func authenticate() {
+            print("👉 1. Iniciando Autenticação Auth Code Flow")
+            
+            guard var components = URLComponents(string: "https://accounts.spotify.com/authorize") else { return }
+            
+            let escopos = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
+            
+            components.queryItems = [
+                URLQueryItem(name: "client_id", value: clientID),
+                URLQueryItem(name: "response_type", value: "code"),
+                URLQueryItem(name: "redirect_uri", value: redirectURI),
+                URLQueryItem(name: "scope", value: escopos),
+                URLQueryItem(name: "show_dialog", value: "true")
+            ]
+            
+            guard let authURL = components.url else { return }
+            
+            authSession = ASWebAuthenticationSession(
+                url: authURL,
+                callbackURLScheme: "musicapplechallenge"
+            ) { [weak self] callbackURL, error in
+                if let error = error {
+                    print("erro no retorno da sessão de auth \(error.localizedDescription)")
+                    return
+                }
+                guard let url = callbackURL else { return }
+                
+                guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                      let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+                    print("deu erro na hora de extrair o código")
+                    return
+                }
+                
+                print("código foi recebido")
+                self?.exchangeCodeForToken(code: code)
+            }
+            
+            authSession?.presentationContextProvider = self
+            authSession?.start()
         }
-        
-        session.presentationContextProvider = self
-        session.start()
-    }
+
+        // MARK: - Troca do Código pelo Access Token
+        private func exchangeCodeForToken(code: String) {
+            guard let url = URL(string: "https://accounts.spotify.com/api/token") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            
+            let authString = "\(clientID):\(clientSecret)"
+            guard let authData = authString.data(using: .utf8) else { return }
+            let base64Auth = authData.base64EncodedString()
+            
+            request.setValue("Basic \(base64Auth)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+            
+            var components = URLComponents()
+            components.queryItems = [
+                URLQueryItem(name: "grant_type", value: "authorization_code"),
+                URLQueryItem(name: "code", value: code),
+                URLQueryItem(name: "redirect_uri", value: redirectURI)
+            ]
+            request.httpBody = components.query?.data(using: .utf8)
+            
+            Task {
+                do {
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                        print("deu erro na API do Spotify. Status code: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                        return
+                    }
+                    
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let token = json["access_token"] as? String {
+                        DispatchQueue.main.async {
+                            self.accessToken = token
+                            print("Deu certo pegar o token de acesso!!!!")
+                            self.startPollingPlaybackState()
+                        }
+                    }
+                } catch {
+                    print("deu erro de rede ao trocar código por token: \(error.localizedDescription)")
+                }
+            }
+        }
     
     private func extractToken(from url: URL) {
         // O token volta no fragmento da URL (#access_token=...)
@@ -140,7 +210,12 @@ final class SpotifyManager: NSObject, ASWebAuthenticationPresentationContextProv
     
     // Suporte ao ASWebAuthenticationPresentationContextProviding
     nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        return UIApplication.shared.windows.first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        let scenes = MainActor.assumeIsolated {
+                    UIApplication.shared.connectedScenes
+                } //HOUVE MUDANCA
+        let windowScene = scenes.first as? UIWindowScene
+        let window = windowScene?.windows.first { $0.isKeyWindow }
+        return window ?? ASPresentationAnchor()
     }
     
     // MARK: - Sincronização em Tempo Real (Fetch do Player State)
@@ -244,6 +319,79 @@ final class SpotifyManager: NSObject, ASWebAuthenticationPresentationContextProv
         }
     }
     
+        func addToQueue(trackURI: String) {
+            triggerHapticFeedback(style: .medium)
+            
+            guard let encodedURI = trackURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let url = URL(string: "https://api.spotify.com/v1/me/player/queue?uri=\(encodedURI)") else { return }
+            
+            sendPlayerCommandCustom(url: url, method: "POST")
+        }
+
+        func searchTracks(query: String) async -> [SpotifySong] {
+            guard let token = accessToken,
+                  let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let url = URL(string: "https://api.spotify.com/v1/search?q=\(encodedQuery)&type=track&limit=20") else {
+                return []
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+                
+                let searchResult = try JSONDecoder().decode(SpotifySearchResponse.self, from: data)
+                
+                return searchResult.tracks?.items.map { track in
+                    let duration = Double(track.duration_ms) / 1000.0
+                    return SpotifySong(
+                        id: track.id,
+                        title: track.name,
+                        artistName: track.artists.first?.name ?? "Artista Desconhecido",
+                        albumArtworkURL: track.album.images.first?.url,
+                        duration: duration
+                    )
+                } ?? []
+                
+            } catch {
+                print("Erro ao realizar busca: \(error.localizedDescription)")
+                return []
+            }
+        }
+
+        func openSpotifyAudioSettings() {
+            triggerHapticFeedback(style: .light)
+            if let url = URL(string: "spotify://") {
+                UIApplication.shared.open(url)
+            }
+        }
+
+        func triggerHapticFeedback(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+            let generator = UIImpactFeedbackGenerator(style: style)
+            generator.prepare()
+            generator.impactOccurred()
+        }
+        
+        // Auxiliar privado para comandos customizados na fila
+        private func sendPlayerCommandCustom(url: URL, method: String) {
+            guard let token = accessToken else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            Task {
+                do {
+                    _ = try await URLSession.shared.data(for: request)
+                    print("Comando executado com sucesso na fila.")
+                } catch {
+                    print("Erro ao enviar comando para a fila: \(error.localizedDescription)")
+                }
+            }
+        }
+    
     // MARK: - Polling do Estado da Música
     private func startPollingPlaybackState() {
         timer?.invalidate()
@@ -256,8 +404,6 @@ final class SpotifyManager: NSObject, ASWebAuthenticationPresentationContextProv
     
     // MARK: - Busca de Letras Dinâmicas (Integração Externa)
     private func fetchLyrics(for song: SpotifySong) async {
-        // Exemplo: requisição para API externa de letras (ex: LRCLIB)
-        // Substitua por chamada real via URLSession buscando song.title e song.artistName
         self.lyrics = [
             LyricLine(time: 2.0, text: "Início de \(song.title)"),
             LyricLine(time: 8.0, text: "Por \(song.artistName)"),

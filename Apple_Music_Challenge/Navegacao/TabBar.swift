@@ -13,6 +13,9 @@ struct CustomTabBar: View{
     var onSearchExpanded: (Bool) -> ()
     var onSearchTextChange: (String) -> ()
     
+    @State private var audioManager = SpotifyManager()
+    @State private var searchResults: [SpotifyManager.SpotifySong] = []
+    
     @GestureState private var isActive: Bool = false
     @State private var isInitialOffSet: Bool = false
     @State private var dragOffset: CGFloat = 0
@@ -23,74 +26,133 @@ struct CustomTabBar: View{
     @FocusState private var isKeyboardActive: Bool
     
     var body: some View {
-        GeometryReader{
-            let tamanho = $0.size
-            let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : CustomTab.allCases.count)
-            let tabItemWidth: CGFloat = max(min(tamanho.width / CGFloat(tabs.count) + (mostrarTabBar ? 1 : 0), 90), 60)
-            let tabItemHeight: CGFloat = 56
+        VStack(spacing: 0) {
             
-            ZStack{
-                if isInitialOffSet{
-                    let mainLayout = isKeyboardActive ? AnyLayout(ZStackLayout(alignment: .leading)) : AnyLayout(HStackLayout(spacing: 12))
-                    
-                    mainLayout{
-                        let tabLayout = isSearchExpanded ? AnyLayout(ZStackLayout()) : AnyLayout(HStackLayout(spacing: 0))
-                        
-                        tabLayout{
-                            ForEach(tabs, id: \.rawValue){ tab in
-                                TabItemView(tab,
-                                            width: isSearchExpanded ? 45 : tabItemWidth,
-                                            height: isSearchExpanded ? 45 : tabItemHeight)
-                                .opacity(isSearchExpanded ? (ativoTab == tab ? 1 : 0) : 1)
-                            }
-                        }
-                        .background(alignment: .leading){
-                            ZStack{
-                                Capsule(style: .continuous)
-                                    .stroke(.gray.opacity(0.25), lineWidth: 3)
-                                    .opacity(isActive ? 1 : 0)
-                                
-                                Capsule(style: .continuous)
-                                    .fill(.background.opacity(90))
-                            }
-                            .compositingGroup()
-                            .frame(maxWidth: tabItemWidth, maxHeight: tabItemHeight)
-                            .scaleEffect(isActive ? 1.3 : 1)
-                            .offset(x: isSearchExpanded ? 0 : dragOffset)
-                            .opacity(isSearchExpanded ? 0 : 1)
-                        }
-                        .padding(3)
-                        .background(TabBarBackground())
-                        .overlay{
-                            if isSearchExpanded{
-                                Capsule()
-                                    .foregroundStyle(.clear)
-                                    .contentShape(.capsule)
-                                    .onTapGesture {
-                                        withAnimation(.bouncy){
-                                            isSearchExpanded = false
+            // MARK: - Lista de Resultados da Busca (Aparece acima da TabBar quando o usuário digita)
+            if isKeyboardActive && !searchResults.isEmpty {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(searchResults) { song in
+                            Button {
+                                // Ação ao selecionar a música (ex: adicionar na fila)
+                                audioManager.addToQueue(trackURI: "spotify:track:\(song.id)")
+                                isKeyboardActive = false
+                                searchText = ""
+                            } label: {
+                                HStack(spacing: 12) {
+                                    AsyncImage(url: URL(string: song.albumArtworkURL ?? "")) { phase in
+                                        if let image = phase.image {
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                        } else {
+                                            Color.gray.opacity(0.3)
                                         }
                                     }
+                                    .frame(width: 40, height: 40)
+                                    .cornerRadius(6)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(song.title)
+                                            .font(.subheadline)
+                                            .bold()
+                                            .lineLimit(1)
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(song.artistName)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundStyle(.green)
+                                        .font(.title3)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(.regularMaterial)
+                                .cornerRadius(12)
                             }
                         }
-                        .opacity(isKeyboardActive ? 0 : 1)
-                        
-                        if mostrarTabBar{
-                            ExpandedSearchBar(height: isSearchExpanded ? 45 : tabItemHeight)
-                        }
                     }
-                    .optionalGeometryGroup()
+                    .padding(.horizontal, 25)
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .onAppear{
-                guard !isInitialOffSet else { return }
-                dragOffset = CGFloat(ativoTab.index) * tabItemWidth
-                isInitialOffSet = true
+                .frame(maxHeight: 250)
+                .padding(.bottom, 10)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             
+            // MARK: - TabBar Principal
+            GeometryReader{
+                let tamanho = $0.size
+                let tabs = CustomTab.allCases.prefix(mostrarTabBar ? 4 : CustomTab.allCases.count)
+                let tabItemWidth: CGFloat = max(min(tamanho.width / CGFloat(tabs.count) + (mostrarTabBar ? 1 : 0), 90), 60)
+                let tabItemHeight: CGFloat = 56
+                
+                ZStack{
+                    if isInitialOffSet{
+                        let mainLayout = isKeyboardActive ? AnyLayout(ZStackLayout(alignment: .leading)) : AnyLayout(HStackLayout(spacing: 12))
+                        
+                        mainLayout{
+                            let tabLayout = isSearchExpanded ? AnyLayout(ZStackLayout()) : AnyLayout(HStackLayout(spacing: 0))
+                            
+                            tabLayout{
+                                ForEach(tabs, id: \.rawValue){ tab in
+                                    TabItemView(tab,
+                                                width: isSearchExpanded ? 45 : tabItemWidth,
+                                                height: isSearchExpanded ? 45 : tabItemHeight)
+                                    .opacity(isSearchExpanded ? (ativoTab == tab ? 1 : 0) : 1)
+                                }
+                            }
+                            .background(alignment: .leading){
+                                ZStack{
+                                    Capsule(style: .continuous)
+                                        .stroke(.gray.opacity(0.25), lineWidth: 3)
+                                        .opacity(isActive ? 1 : 0)
+                                    
+                                    Capsule(style: .continuous)
+                                        .fill(.background.opacity(90))
+                                }
+                                .compositingGroup()
+                                .frame(maxWidth: tabItemWidth, maxHeight: tabItemHeight)
+                                .scaleEffect(isActive ? 1.3 : 1)
+                                .offset(x: isSearchExpanded ? 0 : dragOffset)
+                                .opacity(isSearchExpanded ? 0 : 1)
+                            }
+                            .padding(3)
+                            .background(TabBarBackground())
+                            .overlay{
+                                if isSearchExpanded{
+                                    Capsule()
+                                        .foregroundStyle(.clear)
+                                        .contentShape(.capsule)
+                                        .onTapGesture {
+                                            withAnimation(.bouncy){
+                                                isSearchExpanded = false
+                                            }
+                                        }
+                                }
+                            }
+                            .opacity(isKeyboardActive ? 0 : 1)
+                            
+                            if mostrarTabBar{
+                                ExpandedSearchBar(height: isSearchExpanded ? 45 : tabItemHeight)
+                            }
+                        }
+                        .optionalGeometryGroup()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .onAppear{
+                    guard !isInitialOffSet else { return }
+                    dragOffset = CGFloat(ativoTab.index) * tabItemWidth
+                    isInitialOffSet = true
+                }
+                
+            }
+            .frame(height: 56)
         }
-        .frame(height: 56)
         .padding(.horizontal, 25)
         .padding(.bottom, isKeyboardActive ? 10 : 0)
         
@@ -101,8 +163,19 @@ struct CustomTabBar: View{
         .customnChange(value: isKeyboardActive){
             onSearchExpanded($0)
         }
-        .customnChange(value: searchText){
-            onSearchTextChange($0)
+        .customnChange(value: searchText){ text in
+            onSearchTextChange(text)
+            
+            // Dispara a busca no Spotify em tempo real
+            Task {
+                if text.isEmpty {
+                    searchResults = []
+                } else {
+                    try? await Task.sleep(nanoseconds: 300_000_000) // Debounce leve
+                    guard text == searchText else { return }
+                    searchResults = await audioManager.searchTracks(query: text)
+                }
+            }
         }
     }
     
@@ -190,15 +263,14 @@ struct CustomTabBar: View{
                             isSearchExpanded = true
                         }
                     }
-                //                    .onTapGesture {
-                //                        withAnimation(.bouncy) {
-                //                            isSearchExpanded = true
-                //                        }
-                //                        // Força o foco do teclado assim que a barra expande
-                //                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                //                            isKeyboardActive = true
-                //                        }
-                //                    }
+                    .onTapGesture {
+                        withAnimation(.bouncy) {
+                            isSearchExpanded = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isKeyboardActive = true
+                        }
+                    }
                     .allowsHitTesting(!isSearchExpanded)
                 
                 if isSearchExpanded {
@@ -213,6 +285,8 @@ struct CustomTabBar: View{
             
             Button{
                 isKeyboardActive = false
+                searchText = ""
+                searchResults = []
             } label: {
                 Image(systemName: "xmark")
                     .font(.title2)
@@ -223,6 +297,7 @@ struct CustomTabBar: View{
             .opacity(isKeyboardActive ? 1 : 0)
         }
     }
+    
     var accentColor: Color {
         return .blue
     }

@@ -7,13 +7,17 @@
 
 import SwiftUI
 
-struct MusicView: View {
-    
+struct Musica: View {
     @State private var audioManager = SpotifyManager()
     
     @State private var isDraggingSlider = false
     @State private var localSliderValue: Double = 0.0
     @State private var artworkImage: UIImage? = nil
+    
+    // variável pra descobrir a linha da letra
+    private var activeLyricID: UUID? {
+        audioManager.lyrics.last(where: { audioManager.currentTime >= $0.time })?.id
+    }
     
     var body: some View {
         NavigationStack {
@@ -38,51 +42,9 @@ struct MusicView: View {
                 
                 VStack(alignment: .leading, spacing: 10) {
                     
-                    // Exibição da capa do álbum vinda da URL da Spotify Web API
-                    if let artworkURLString = audioManager.currentSong?.albumArtworkURL,
-                       let url = URL(string: artworkURLString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 300, height: 300)
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                                    .clipShape(
-                                        UnevenRoundedRectangle(
-                                            topLeadingRadius: 10,
-                                            bottomLeadingRadius: 30,
-                                            bottomTrailingRadius: 10,
-                                            topTrailingRadius: 30
-                                        )
-                                    )
-                                    .task(id: url) {
-                                        if let data = try? Data(contentsOf: url),
-                                           let uiImage = UIImage(data: data) {
-                                            self.artworkImage = uiImage
-                                        }
-                                    }
-                            case .failure(_):
-                                Image(systemName: "music.note")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 200, height: 200)
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                    } else {
-                        HStack {
-                            Spacer()
-                            Image(systemName: "music.note")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 200, height: 200)
-                            Spacer()
-                        }
-                    }
+                    NowPlaying(imageSize: 200, showArtworkOnly: true)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    
                     Spacer()
                     
                     Text(audioManager.currentSong?.title ?? "Nenhuma música")
@@ -108,6 +70,7 @@ struct MusicView: View {
                                 }
                             }
                         )
+                        .tint(.white)
                         
                         HStack {
                             Text(audioManager.formatTime(audioManager.currentTime))
@@ -121,7 +84,6 @@ struct MusicView: View {
                     
                     // MARK: - Botões de Controle do Player
                     HStack(spacing: 0) {
-                        // Repetir
                         Button {
                             audioManager.toggleRepeat()
                         } label: {
@@ -131,7 +93,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Voltando 10s
                         Button {
                             audioManager.seekBy(seconds: -10)
                         } label: {
@@ -140,7 +101,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Voltar Faixa
                         Button {
                             audioManager.skipToPrevious()
                         } label: {
@@ -149,7 +109,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Play / Pause Principal
                         Button {
                             audioManager.togglePlayPause()
                         } label: {
@@ -158,7 +117,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Avançar Faixa
                         Button {
                             audioManager.skipToNext()
                         } label: {
@@ -167,7 +125,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Avançar 10s
                         Button {
                             audioManager.seekBy(seconds: 10)
                         } label: {
@@ -176,7 +133,6 @@ struct MusicView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // Shuffle
                         Button {
                             audioManager.toggleShuffle()
                         } label: {
@@ -187,18 +143,55 @@ struct MusicView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .foregroundStyle(.primary)
+                    .padding(.vertical, 10)
                     
                     Spacer()
                     
-                    // MARK: - Painel de Letras / Card Inferior
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 10,
-                        bottomLeadingRadius: 30,
-                        bottomTrailingRadius: 10,
-                        topTrailingRadius: 30
-                    )
-                    .frame(height: 140)
-                    .foregroundStyle(.ultraThickMaterial)
+                    // MARK: - Painel de Letras (Estilo Spotify)
+                    ZStack {
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 10,
+                            bottomLeadingRadius: 30,
+                            bottomTrailingRadius: 10,
+                            topTrailingRadius: 30
+                        )
+                        .foregroundStyle(.ultraThickMaterial)
+                        
+                        if audioManager.lyrics.isEmpty {
+                            Text("Letras não disponíveis")
+                                .foregroundStyle(.secondary)
+                        } else {
+                           
+                            ScrollViewReader { scrollProxy in
+                                ScrollView(showsIndicators: false) {
+                                    VStack(alignment: .leading, spacing: 18) {
+                                        ForEach(audioManager.lyrics) { linha in
+                                            let isCurrentLine = activeLyricID == linha.id
+                                            
+                                            Text(linha.text)
+                                                .font(isCurrentLine ? .title2 : .title3)
+                                                .fontWeight(isCurrentLine ? .bold : .medium)
+                                                .foregroundStyle(isCurrentLine ? .primary : .secondary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .id(linha.id)
+                                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isCurrentLine)
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 30)
+                                }
+                                // Quando a linha ativa muda, rola suavemente para ela
+                                .onChange(of: activeLyricID) { oldValue, newID in
+                                    if let id = newID {
+                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                            scrollProxy.scrollTo(id, anchor: .center)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 180)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical)
@@ -210,34 +203,23 @@ struct MusicView: View {
                     }
                 }
             }
+            .onAppear {
+                if UserDefaults.standard.string(forKey: "spotify_access_token") == nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if audioManager.accessToken == nil {
+                            audioManager.authenticate()
+                        }
+                    }
+                } else {
+                    Task {
+                        await audioManager.fetchCurrentPlaybackState()
+                    }
+                }
+            }
         }
     }
 }
 
-// Modelo para representar uma linha da letra sincronizada
-//struct LyricLine: Identifiable, Equatable {
-//    let id = UUID()
-//    let time: TimeInterval // Momento em segundos em que a linha aparece
-//    let text: String
-//}
-//
-//// Adicione ao seu SpotifyManager ou a um LyricsService dedicado:
-//func fetchLyricsForCurrentSong() async -> [LyricLine] {
-//    guard let song = currentSong else { return [] }
-//
-//    // Exemplo: Você faria uma requisição para uma API externa (ex: LRCLIB API)
-//    // Passando o título (song.title) e o artista (song.artistName) para buscar o arquivo LRC.
-//
-//    return [
-//        LyricLine(time: 5.0, text: "Primeira frase da música..."),
-//        LyricLine(time: 12.5, text: "Segunda frase sincronizada...")
-//    ]
-//}
-
-//Na sua MusicView, você destacaria a linha ativa comparando o audioManager.currentTime com o campo time de cada linha da letra.
-
-
-
 #Preview {
-    MusicView()
+    Musica()
 }

@@ -10,8 +10,6 @@ import SwiftUI
 struct CardSwipe: View {
     
     @State private var audioManager = SpotifyManager()
-    @State private var isDraggingSlider = false
-    @State private var localSliderValue: Double = 0.0
     @State private var artworkImage: UIImage? = nil
     
     var person: String
@@ -21,68 +19,12 @@ struct CardSwipe: View {
     var body: some View {
         VStack{
             ZStack {
-                //                Rectangle()
-                //                    .scaledToFill()
-                //                    .frame(width: 257, height: 241)
-                //                    .foregroundStyle(colorSwipe.opacity(0.9))
-                //                    .clipShape(
-                //                        UnevenRoundedRectangle(
-                //                            topLeadingRadius: 5,
-                //                            bottomLeadingRadius: 15,
-                //                            bottomTrailingRadius: 5,
-                //                            topTrailingRadius: 15
-                //                        )
-                //                    )
                 
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Exibição da capa do álbum vinda da URL da Spotify Web API
-                    if let artworkURLString = audioManager.currentSong?.albumArtworkURL,
-                       let url = URL(string: artworkURLString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 257, height: 241)
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                                    .clipShape(
-                                        UnevenRoundedRectangle(
-                                            topLeadingRadius: 10,
-                                            bottomLeadingRadius: 30,
-                                            bottomTrailingRadius: 10,
-                                            topTrailingRadius: 30
-                                        )
-                                    )
-                                    .task(id: url) {
-                                        if let data = try? Data(contentsOf: url),
-                                           let uiImage = UIImage(data: data) {
-                                            self.artworkImage = uiImage
-                                        }
-                                    }
-                            case .failure(_):
-                                Image(systemName: "music.note")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 200, height: 200)
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                    } else {
-                        HStack {
-                            Spacer()
-                            Image(systemName: "music.note")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 200, height: 200)
-                            Spacer()
-                        }
-                    }
+                    NowPlaying(imageSize: 150, showArtworkOnly: true)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-                
             }
             .offset(x: offSet.width, y: offSet.height * 0.4)
             .rotationEffect(.degrees(Double(offSet.width / 40)))
@@ -110,6 +52,7 @@ struct CardSwipe: View {
                     .font(.subheadline)
                 .foregroundStyle(.secondary)}
         }}
+
     
     func swipeCard(width: CGFloat) {
         switch width {
@@ -128,8 +71,10 @@ struct CardSwipe: View {
         switch width {
         case -500...(-130):
             colorSwipe = .red
+            audioManager.toggleShuffle()
         case 130...500:
             colorSwipe = .green
+            audioManager.toggleShuffle()
         default :
             colorSwipe = .black
         }

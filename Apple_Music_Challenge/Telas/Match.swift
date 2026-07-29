@@ -10,7 +10,6 @@ import SwiftUI
 struct Match: View {
     
     @State private var audioManager = SpotifyManager()
-    
     @State private var isDraggingSlider = false
     @State private var localSliderValue: Double = 0.0
     @State private var artworkImage: UIImage? = nil
@@ -19,7 +18,6 @@ struct Match: View {
     
     var body: some View {
 
-        
         ZStack{
             // Background
             Group {
@@ -33,28 +31,30 @@ struct Match: View {
                             .init(color: .background, location: 0.7)
                         ],
                         startPoint: .top,
-                        endPoint: .center
+                        endPoint: .bottom
                     )
                 }
             } .ignoresSafeArea()
 
-            // MARK: Cabeçalho
             VStack(alignment: .leading, spacing: 15) {
-                Text("Explorar")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("O que estão ouvindo")
-                    .font(.title)
-                    .bold()
-                    .foregroundColor(.primary)
+                            // MARK: Cabeçalho
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Explorar")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
+                                Text("O que estão ouvindo")
+                                    .font(.title)
+                                    .bold()
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal)
                 
                 ZStack{
-            
             Rectangle()
                 .scaledToFill()
                 .frame(width: 315, height: 393)
-                .foregroundStyle(.gray.opacity(0.9))
+                .foregroundStyle(.tertiary.opacity(0.5))
                 .clipShape(
                     UnevenRoundedRectangle(
                         topLeadingRadius: 5,
@@ -66,7 +66,8 @@ struct Match: View {
             
                 ForEach(people, id: \.self) { person in
                     CardSwipe(person: person)}
-                }
+                }.frame(maxWidth: .infinity, alignment: .center)
+                
             
                 // MARK: - Controles do Slider e Tempo
                 VStack(spacing: 7) {
@@ -97,11 +98,12 @@ struct Match: View {
                 // MARK: - Botões de Controle do Player
                 HStack(spacing: 0) {
                     
-                    // Voltando 10s
+                    // Adicionar a lista
                     Button {
-                        audioManager.seekBy(seconds: -10)
+                        if let songID = audioManager.currentSong?.id {
+                            audioManager.addToQueue(trackURI: "spotify:track:\(songID)")}
                     } label: {
-                        Image(systemName: "gobackward.10")
+                        Image(systemName: "music.note.list")
                             .font(.system(size: 20, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -143,21 +145,21 @@ struct Match: View {
                     }
                     .frame(maxWidth: .infinity)
                     
-                    // Avançar 10s
+                    // Melhorar qualidade do som
                     Button {
-                        audioManager.seekBy(seconds: 10)
+                        audioManager.openSpotifyAudioSettings()
                     } label: {
-                        Image(systemName: "goforward.10")
+                        Image(systemName: "waveform")
                             .font(.system(size: 20, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
                     
-                    // Shuffle
+                    // Haptics
                     Button {
-                        audioManager.toggleShuffle()
+                        audioManager.triggerHapticFeedback(style: .medium)
                     } label: {
-                        Image(systemName: "shuffle")
-                            .font(.system(size: 18))
+                        Image(systemName: "apple.haptics.and.music.note")
+                            .font(.system(size: 22))
                             .foregroundStyle(audioManager.isShuffleOn ? .blue : .primary)
                     }
                     .frame(maxWidth: .infinity)
